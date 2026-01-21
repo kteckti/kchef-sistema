@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  # O Banco de Dados PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: kteck_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: kteck_user
+      POSTGRES_PASSWORD: kteck_password
+      POSTGRES_DB: kteck_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Interface Gráfica (Tipo PHPMyAdmin, mas para Postgres)
+  adminer:
+    image: adminer
+    container_name: kteck_adminer
+    restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:

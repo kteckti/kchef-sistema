@@ -1,0 +1,290 @@
+// schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // ou "mysql", dependendo do seu banco local
+  url      = env("DATABASE_URL")
+}
+
+// --- 1. CONFIGURAÇÕES DA LOJA (Baseado em dadosempresa.php) ---
+model Config {
+  id            Int       @id @default(autoincrement())
+  idu           Int       // ID do Dono (Admin)
+  nomeempresa   String
+  url           String    @unique // O slug (ex: juarex)
+  cpf           String?
+  senha         String?   // SHA1
+  status        Int       @default(1)
+  expiracao     DateTime?
+  
+  // Contato
+  celular       String?
+  telefone      String?
+  email         String?
+  nomeadmin     String?
+
+  // Endereço
+  cep           String?
+  rua           String?
+  numero        String?
+  complemento   String?
+  bairro        String?
+  cidade        String?
+  uf            String?
+
+  // Aparência e Funcionamento
+  fundoTopo String?
+  corfundo      String?   @default("#ffffff")
+  funcionamento Int       @default(1) // 1=Aberto, 2=Fechado
+  fuso          String?   @default("America/Sao_Paulo")
+  cormenu     String?  @default("#000000") // Cor do Menu/Botões
+  corcarrinho String?  @default("#f8f9fa") // Cor da área do carrinho
+  
+  // Logística (Novos campos descobertos)
+  timerdelivery String?   // Ex: "40 a 50 min"
+  timerbalcao   String?   // Ex: "20 min"
+  dfree         Decimal?  @db.Decimal(10, 2) // Valor para entrega grátis?
+
+  totalMesas  Int      @default(10)
+
+  // Horários (seg1, seg2... armazenados como string "08:00,12:00...")
+  dom String?
+  seg String?
+  ter String?
+  qua String?
+  qui String?
+  sex String?
+  sab String?
+
+  datacad       DateTime  @default(now())
+  
+  // Relações
+  logos         Logo[]
+  fundos        FundoTopo[]
+
+  trocar_senha Int      @default(1)
+  
+  @@map("config") // Mapeia para a tabela 'config' existente
+}
+
+// --- 2. CATEGORIAS (Baseado em categorias.php) ---
+model Categoria {
+  id        Int       @id @default(autoincrement())
+  idu       Int
+  nome      String
+  posicao   Int       @default(0)
+  url       String?   // Foto da categoria (pic)
+  
+  produtos  Produto[]
+  
+  @@map("categorias")
+}
+
+// --- 3. PRODUTOS (Baseado em produtos.php e editarprodutos.php) ---
+model Produto {
+  id           Int       @id @default(autoincrement())
+  idu          Int
+  categoriaId  Int       @map("categoria") // No PHP a coluna chama 'categoria'
+  nome         String
+  ingredientes String?   // No PHP era 'descricao' ou 'ingredientes'
+  valor        Decimal   @db.Decimal(10, 2)
+  foto         String?
+  visivel      String    @default("G") // G, 1, 2, 3...
+  status       Int       @default(1)
+  
+  categoria    Categoria @relation(fields: [categoriaId], references: [id])
+  opcionais    ProdutoGrupo[] // Relacionamento com grupos
+
+  tamanhos     Tamanho[]
+
+  @@map("produtos")
+}
+
+// --- 4. GRUPOS DE OPCIONAIS (Baseado em grupos.php) ---
+model Grupo {
+  id          Int     @id @default(autoincrement()) @map("Id") // O PHP usa 'Id' maiúsculo
+  idu         Int
+  nomeinterno String
+  nomegrupo   String
+  posicao     Int
+  quantidade  Int     // Máximo de seleção
+  obrigatorio Int     // 1=Obri, 2=Max, 3=Sabores
+  status      Int     @default(1)
+  
+  opcionais   Opcional[]
+  produtos    ProdutoGrupo[]
+
+  @@map("grupos")
+}
+
+// Tabela de Ligação: Produto <-> Grupo (Baseado em opgrupo.php)
+model ProdutoGrupo {
+  id        Int     @id @default(autoincrement())
+  idp       Int     // ID Produto
+  idgrupo   Int     // ID Grupo
+  
+  produto   Produto @relation(fields: [idp], references: [id], onDelete: Cascade)
+  grupo     Grupo   @relation(fields: [idgrupo], references: [id], onDelete: Cascade)
+
+  @@map("limite_op") // Nome da tabela no banco legado
+}
+
+// --- 5. OPCIONAIS (Baseado em opcionais.php) ---
+model Opcional {
+  id          Int     @id @default(autoincrement())
+  idu         Int // Opcional, pois já tem idg, mas o PHP salva
+  idg         Int     // ID do Grupo
+  opnome      String
+  opdescricao String?
+  valor       Decimal @db.Decimal(10, 2)
+  status      Int     @default(1)
+
+  grupo       Grupo   @relation(fields: [idg], references: [id], onDelete: Cascade)
+
+  @@map("opcionais")
+}
+
+// --- 6. MESAS (Baseado em mesas.php) ---
+model Mesa {
+  id      Int    @id @default(autoincrement())
+  idu     Int
+  numero  String // String para aceitar "01", "10", etc.
+  
+  @@map("mesas")
+}
+
+// --- 7. FUNCIONÁRIOS (Baseado em funcionarios.php) ---
+model Funcionario {
+  id     Int    @id @default(autoincrement())
+  idu    Int
+  nome   String
+  login  String
+  senha  String // SHA1
+  acesso Int    // 1=PDV, 2=Cozinha
+  
+  @@map("funcionarios") // Deduzi o nome, se der erro trocamos
+}
+
+// --- TABELAS AUXILIARES DO ADMIN (Já tínhamos) ---
+model Adm {
+  id            Int       @id @default(autoincrement())
+  nome          String?
+  login         String?
+  senha         String?
+  celular       String?
+  tentativas    Int       @default(0)
+  bloqueado_ate DateTime?
+  novocliente   String?
+  dias          String?
+  bloquear      Int?
+  statuslink    Int?
+  nomedosite    String?
+  urlsite       String?
+  linkpgmto     String?   @db.Text
+  
+  @@map("adm")
+}
+
+model Logo {
+  id    Int     @id @default(autoincrement())
+  idu   Int     // Agora é Int
+  foto  String
+  
+  config Config @relation(fields: [idu], references: [id])
+  @@map("logo")
+}
+
+model FundoTopo {
+  id    Int     @id @default(autoincrement())
+  idu   Int     // Agora é Int
+  foto  String
+
+  config Config @relation(fields: [idu], references: [id])
+  @@map("fundo_topo") // Verifique se é 'fundo_topo' ou 'fundotopo' no banco real
+}
+
+model Tamanho {
+  id        Int     @id @default(autoincrement())
+  produtoId Int     // ID do Produto
+  descricao String
+  valor     Decimal @db.Decimal(10, 2)
+  status    Int     @default(1) // 1=Ativo, 2=Inativo
+
+  produto   Produto @relation(fields: [produtoId], references: [id], onDelete: Cascade)
+
+  @@map("tamanhos")
+}
+
+// 9. BAIRROS E TAXAS (Baseado em bairros.php)
+model Bairro {
+  id      Int     @id @default(autoincrement())
+  idu     Int     // ID da Loja
+  bairro  String
+  taxa    Decimal @db.Decimal(10, 2) @default(0.00)
+
+  @@map("bairros")
+}
+
+// 10. PEDIDOS (Cabeçalho)
+model Pedido {
+  id              Int       @id @default(autoincrement())
+  idu             Int       // ID da Loja
+  data            DateTime  @default(now())
+  
+  // Dados do Cliente
+  nome_cliente    String
+  celular_cliente String
+  
+  // Endereço / Entrega
+  tipo_entrega    String    // "DELIVERY", "BALCAO", "MESA"
+  endereco_rua    String?
+  endereco_num    String?
+  endereco_bairro String?
+  endereco_comp   String?   // Complemento
+  taxa_entrega    Decimal   @db.Decimal(10, 2) @default(0.00)
+  mesa            String?   // Se for pedido na mesa
+
+  // Pagamento
+  forma_pagamento String    // "DINHEIRO", "CARTAO", "PIX"
+  troco_para      String?   // Se for dinheiro, troco para quanto?
+  
+  // Totais
+  subtotal        Decimal   @db.Decimal(10, 2)
+  total           Decimal   @db.Decimal(10, 2)
+  createdAt    DateTime     @default(now())
+  // Controle
+  status          Int       @default(1) 
+  // 1=Pendente (Novo), 2=Aceito/Preparo, 3=Entrega/Pronto, 4=Finalizado, 5=Cancelado
+  
+  observacao      String?   // Obs geral do pedido
+
+  itens           PedidoItem[]
+
+  pessoas     Int?      // Quantidade de pessoas
+  celular     String?   // Celular do cliente
+
+  @@map("pedidos")
+}
+
+// 11. ITENS DO PEDIDO
+model PedidoItem {
+  id          Int     @id @default(autoincrement())
+  pedidoId    Int
+  produtoId   Int?    // Opcional, caso o produto seja deletado depois, mantemos o histórico
+  
+  // Snapshot dos dados (Importante: Se o produto mudar de preço amanhã, esse pedido antigo não pode mudar)
+  nome_produto String 
+  quantidade   Int
+  valor_unit   Decimal @db.Decimal(10, 2)
+  total_item   Decimal @db.Decimal(10, 2)
+  
+  // Detalhes salvos como texto para facilitar (Ex: "Tamanho: G, Adicionais: Bacon, Sem Cebola")
+  observacao   String?  @db.Text 
+
+  pedido      Pedido  @relation(fields: [pedidoId], references: [id], onDelete: Cascade)
+
+  @@map("pedidos_itens")
+}

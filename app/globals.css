@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Configuração básica de cores para o fundo não ficar transparente/feio */
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 243, 244, 246; /* Um cinza bem claro padrão admin */
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+}

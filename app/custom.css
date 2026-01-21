@@ -1,0 +1,82 @@
+/* --- Paleta da Marca --- 
+   Principal: #102a43 (Azul Profundo)
+   Fundo: #f5f5f5 (Cinza Claro)
+*/
+
+/* 1. Fundo Geral */
+body, .slim-body, .signin-wrapper {
+    background-color: #f5f5f5 !important;
+}
+
+/* 2. Navbar (Barra Superior) */
+.slim-navbar {
+    background-color: #102a43 !important;
+    border-bottom: none !important;
+    box-shadow: 0 4px 12px rgba(16, 42, 67, 0.15);
+}
+
+/* Links da Navbar */
+.slim-navbar .nav-link {
+    color: rgba(255, 255, 255, 0.7) !important; /* Branco com transparência */
+    border-color: rgba(255, 255, 255, 0.1) !important;
+    background-color: transparent !important;
+}
+
+.slim-navbar .nav-link:hover,
+.slim-navbar .nav-link:focus {
+    color: #ffffff !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.slim-navbar .nav-link i {
+    color: #fff !important; /* Ícones brancos */
+}
+
+/* 3. Cards (Conteúdo Branco sobre Fundo Cinza) */
+.card, .section-wrapper, .signin-box {
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05) !important;
+    border-radius: 8px !important; /* Leve arredondamento moderno */
+}
+
+/* 4. Botões Primários (Usando a cor da marca) */
+.btn-primary, .btn-info, .btn-signin {
+    background-color: #102a43 !important;
+    border-color: #102a43 !important;
+    background-image: none !important; /* Remove degradê antigo do Slim */
+    color: #fff !important;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover, .btn-info:hover, .btn-signin:hover {
+    background-color: #243b53 !important; /* Um pouco mais claro no hover */
+    box-shadow: 0 4px 8px rgba(16, 42, 67, 0.3);
+}
+
+/* 5. Títulos e Textos */
+.slim-pagetitle, .section-title, .signin-title-primary {
+    color: #102a43 !important;
+}
+
+.slim-logo a {
+    color: #102a43 !important;
+}
+
+/* 6. Ajustes de Tabelas */
+.table thead th {
+    background-color: #f0f4f8 !important;
+    color: #102a43 !important;
+    border-bottom: 2px solid #102a43 !important;
+}
+
+/* 7. Ajuste do Container de Login */
+.signin-wrapper {
+    background-color: #102a43 !important; /* Fundo azul no login fica bonito */
+}
+.signin-box {
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+}
+.signin-box .slim-logo a {
+    color: #102a43 !important;
+}
