@@ -16,6 +16,7 @@ export default async function CardapioPage({ params }: PageProps) {
   // 1. VERIFICA SESSÃO
   const cookieStore = cookies();
   const sessionNome = cookieStore.get(`comanda_nome_${slug}_${mesaId}`)?.value;
+  const sessionCelular = cookieStore.get(`comanda_celular_${slug}_${mesaId}`)?.value || '';
   
   if (!sessionNome) {
     redirect(`/${slug}/mesa/${mesaId}`);
@@ -71,6 +72,7 @@ export default async function CardapioPage({ params }: PageProps) {
       produtos={produtosFormatados}
       mesaId={mesaId}
       nomeCliente={sessionNome}
+      celularCliente={sessionCelular}
     />
   );
 }

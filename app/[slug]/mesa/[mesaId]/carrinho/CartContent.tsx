@@ -11,9 +11,10 @@ interface CartProps {
   mesaId: string;
   nomeCliente: string;
   slug: string;
+  celularCliente: string;
 }
 
-export default function CartContent({ empresa, mesaId, nomeCliente, slug }: CartProps) {
+export default function CartContent({ empresa, mesaId, nomeCliente, celularCliente, slug }: CartProps) {
   const [cartItems, setCartItems] = useState<any[]>([]);
   const [isSending, setIsSending] = useState(false);
   
@@ -50,7 +51,7 @@ export default function CartContent({ empresa, mesaId, nomeCliente, slug }: Cart
         slug: slug,
         mesaId: mesaId,
         nomeCliente: nomeCliente,
-        celular: "", 
+        celular: celularCliente, 
         itens: cartItems,
         subtotal: totalGeral,
         totalGeral: totalGeral,

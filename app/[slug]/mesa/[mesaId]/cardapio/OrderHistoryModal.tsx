@@ -8,10 +8,12 @@ interface Props {
   onClose: () => void;
   slug: string;
   mesaId: string;
+  nomeCliente: string;
+  celularCliente: string;
   color: string;
 }
 
-export default function OrderHistoryModal({ isOpen, onClose, slug, mesaId, color }: Props) {
+export default function OrderHistoryModal({ isOpen, onClose, slug, mesaId, nomeCliente, celularCliente, color }: Props) {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
@@ -19,13 +21,13 @@ export default function OrderHistoryModal({ isOpen, onClose, slug, mesaId, color
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      buscarHistoricoPedidos(slug, mesaId)
+      buscarHistoricoPedidos(slug, mesaId,nomeCliente,celularCliente)
         .then(data => setOrders(data))
         .finally(() => setLoading(false));
     } else {
       setSelectedOrder(null);
     }
-  }, [isOpen, slug, mesaId]);
+  }, [isOpen, slug, mesaId, nomeCliente, celularCliente]);
 
   if (!isOpen) return null;
 

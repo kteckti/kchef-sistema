@@ -4,52 +4,54 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/src/lib/prisma';
 
+// --- 1. ABRIR MESA (LOGIN) ---
 export async function abrirMesaAction(formData: FormData) {
   const nome = formData.get('nome') as string;
-  const celular = formData.get('celular') as string; // Opcional
+  const celular = formData.get('celular') as string;
   const slug = formData.get('slug') as string;
   const mesaId = formData.get('mesaId') as string;
 
-  // 1. Apenas valida se a empresa existe
+  // Debug: Verifique no terminal do VS Code se o celular está chegando aqui
+  console.log(`[LOGIN] Abrindo mesa ${mesaId} para: ${nome}, Celular: ${celular}`);
+
   const empresa = await prisma.config.findUnique({ where: { url: slug } });
   
   if (!empresa) {
-    return { error: "Empresa não encontrada" }; // Ou redirecionar para erro
+    return { error: "Empresa não encontrada" };
   }
 
-  // --- REMOVIDA A CRIAÇÃO DE PEDIDO AQUI ---
-  // O pedido será criado apenas quando o cliente enviar o carrinho.
-  
-  // 2. Grava a Sessão (Cookies)
   const cookieStore = cookies();
   
-  // Cookie de Identificação
+  // 1. Grava Cookie do Nome
   cookieStore.set(`comanda_nome_${slug}_${mesaId}`, nome, {
     maxAge: 60 * 60 * 12, // 12 horas
     path: '/',
   });
 
-  // (Opcional) Cookie de Celular
-  if (celular) {
+  // 2. Grava Cookie do Celular (SEMPRE que tiver valor)
+  if (celular && celular.trim() !== '') {
     cookieStore.set(`comanda_celular_${slug}_${mesaId}`, celular, {
       maxAge: 60 * 60 * 12,
       path: '/',
     });
   }
 
-  // 3. Redireciona para o cardápio
+  // 3. Redireciona
   redirect(`/${slug}/mesa/${mesaId}/cardapio`);
 }
 
+// --- 2. ENCERRAR SESSÃO (LOGOUT) ---
 export async function encerrarSessaoAction(slug: string, mesaId: string) {
   const cookieStore = cookies();
-  const cookieName = `comanda_nome_${slug}_${mesaId}`;
   
-  // 1. Busca a empresa para pegar o ID
+  // Nomes dos cookies
+  const cookieNome = `comanda_nome_${slug}_${mesaId}`;
+  const cookieCelular = `comanda_celular_${slug}_${mesaId}`; // <--- FALTAVA ISSO
+  
   const empresa = await prisma.config.findUnique({ where: { url: slug } });
 
   if (empresa) {
-    // 2. Marca o pedido dessa mesa como finalizado (Status 4) para liberar no painel
+    // Marca pedidos pendentes como finalizados para liberar a mesa (opcional, manter se for sua regra)
     await prisma.pedido.updateMany({
       where: {
         idu: empresa.id,
@@ -60,34 +62,70 @@ export async function encerrarSessaoAction(slug: string, mesaId: string) {
     });
   }
 
-  // 3. Remove o cookie
-  cookieStore.delete(cookieName);
+  // DELETA AMBOS OS COOKIES PARA LIMPAR A SESSÃO DE VEZ
+  cookieStore.delete(cookieNome);
+  cookieStore.delete(cookieCelular);
 
-  // 4. Redireciona para a tela de login da mesa
   redirect(`/${slug}/mesa/${mesaId}`);
 }
 
-export async function buscarHistoricoPedidos(slug: string, mesaId: string) {
+// --- 3. BUSCAR HISTÓRICO (FILTRO CORRIGIDO) ---
+export async function buscarHistoricoPedidos(
+  slug: string, 
+  mesaId: string, 
+  nomeCliente: string, 
+  celularCliente: string
+) {
   try {
     const empresa = await prisma.config.findUnique({ where: { url: slug } });
     if (!empresa) return [];
 
-    const pedidos = await prisma.pedido.findMany({
-      where: {
+    console.log(`[HISTORICO] Buscando para ${nomeCliente}. Celular: [${celularCliente}]`);
+
+    // --- CORREÇÃO AQUI ---
+    // Removemos 'celular_cliente' desta lista inicial.
+    // Deixamos apenas o que é OBRIGATÓRIO para todos (Loja, Mesa, Nome e Status).
+    const whereClause: any = {
         idu: empresa.id,
         mesa: mesaId,
-        // Trazemos status 1, 2, 3 (ativos) e 4 (finalizado/histórico recente)
-        status: { in: [1, 2, 3, 4] } 
-      },
+        nome_cliente: nomeCliente,
+        // celular_cliente: celularCliente, <--- ESTA LINHA FOI REMOVIDA
+        status: { in: [1, 2, 3, 4] }
+    };
+
+    // Agora o IF abaixo controla totalmente a lógica do celular:
+    // "Ou é igual ao meu celular, OU é vazio (pedido antigo)"
+    if (celularCliente && celularCliente.trim() !== '') {
+        whereClause.OR = [
+            { celular_cliente: celularCliente },
+            { celular_cliente: '' }
+        ];
+    }
+
+    const pedidos = await prisma.pedido.findMany({
+      where: whereClause,
       include: {
-        itens: true // Traz os itens da tabela 'pedidos_itens'
+        itens: true 
       },
       orderBy: {
         createdAt: 'desc'
       }
     });
 
-    return pedidos;
+    const pedidosFormatados = pedidos.map((pedido) => ({
+      ...pedido,
+      taxa_entrega: Number(pedido.taxa_entrega),
+      subtotal: Number(pedido.subtotal),
+      total: Number(pedido.total),
+      itens: pedido.itens.map((item) => ({
+        ...item,
+        valor_unit: Number(item.valor_unit),
+        total_item: Number(item.total_item)
+      }))
+    }));
+
+    return pedidosFormatados;
+
   } catch (error) {
     console.error("Erro ao buscar histórico:", error);
     return [];

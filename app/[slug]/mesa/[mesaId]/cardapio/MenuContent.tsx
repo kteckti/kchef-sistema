@@ -22,9 +22,10 @@ type Props = {
     produtos: Produto[];
     mesaId: string;
     nomeCliente: string;
+    celularCliente: string;
 };
 
-export default function MenuContent({ empresa, categorias, produtos, mesaId, nomeCliente }: Props) {
+export default function MenuContent({ empresa, categorias, produtos, mesaId, nomeCliente, celularCliente}: Props) {
     const [selectedProduct, setSelectedProduct] = useState<Produto | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeCategory, setActiveCategory] = useState<number>(categorias[0]?.id || 0);
@@ -155,6 +156,8 @@ export default function MenuContent({ empresa, categorias, produtos, mesaId, nom
                     onClose={() => setIsHistoryOpen(false)}
                     slug={empresa.url}
                     mesaId={mesaId}
+                    nomeCliente={nomeCliente}
+                    celularCliente={celularCliente}
                     color={empresa.cormenu || '#000'}
                 />
             </header>
