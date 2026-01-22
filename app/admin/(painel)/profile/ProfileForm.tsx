@@ -18,6 +18,7 @@ export default function ProfileForm({ data }: { data: any }) {
 
   return (
     <form action={formAction}>
+      <input type="hidden" name="id" value={data.id} />
       <div className="row">
         <div className="col-md-3">
           <div className="form-group">

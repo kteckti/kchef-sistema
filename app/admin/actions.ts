@@ -101,6 +101,10 @@ export async function logoutAction() {
 }
 
 export async function updateProfileAction(prevState: any, formData: FormData) {
+  // 1. PEGA O ID DO FORMULÁRIO (Converter para Int)
+  const idRaw = formData.get('id') as string;
+  const id = parseInt(idRaw);
+
   const nome = formData.get('nome') as string;
   const login = formData.get('login') as string;
   const celular = formData.get('celular') as string;
@@ -110,19 +114,21 @@ export async function updateProfileAction(prevState: any, formData: FormData) {
     let dataUpdate: any = { nome, login, celular };
 
     if (senha && senha.length > 0) {
+      const crypto = require('crypto'); // Garante que importou
       const shasum = crypto.createHash('sha1');
       shasum.update(senha);
       dataUpdate.senha = shasum.digest('hex');
     }
 
+    // 2. USA O ID DINÂMICO NO WHERE
     await prisma.adm.update({
-      where: { id: 1 },
+      where: { id: id }, // <--- AGORA ESTÁ CORRETO
       data: dataUpdate
     });
 
-    // Retorna sucesso para o componente exibir o Toast
     return { success: true, message: "Perfil atualizado com sucesso!" };
   } catch (error) {
+    console.error(error); // Bom para ver erros no log da Vercel
     return { success: false, message: "Erro ao atualizar perfil." };
   }
 }
