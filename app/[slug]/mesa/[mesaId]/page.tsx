@@ -2,7 +2,10 @@ import { prisma } from '@/src/lib/prisma';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import LoginForm from './LoginForm';
-import TableLimitError from './TableLimitError'; // <--- Importe o novo componente
+import TableLimitError from './TableLimitError';
+
+// FORÇA DINÂMICO: Garante que o Next.js verifique os cookies em todo acesso
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: {
@@ -13,8 +16,33 @@ interface PageProps {
 
 export default async function MesaLoginPage({ params }: PageProps) {
   const { slug, mesaId } = params;
+  const cookieStore = cookies();
 
-  // 1. Busca a empresa
+  // ============================================================
+  // 1. PROTEÇÃO: LOGIN DE FUNCIONÁRIO (GATEKEEPER)
+  // ============================================================
+  // Verifica se existe o cookie de funcionário ESPECÍFICO desta mesa
+  const staffCookie = cookieStore.get(`staff_session_${slug}_${mesaId}`)?.value;
+
+  if (!staffCookie) {
+    // Se não estiver logado, manda para o login do funcionário
+    const currentPath = `/${slug}/mesa/${mesaId}`;
+    redirect(`/${slug}/funcionario/login?mesaId=${mesaId}&callbackUrl=${encodeURIComponent(currentPath)}`);
+  }
+
+  // ============================================================
+  // 2. VERIFICA SE JÁ EXISTE CLIENTE LOGADO
+  // ============================================================
+  const sessionNome = cookieStore.get(`comanda_nome_${slug}_${mesaId}`)?.value;
+
+  if (sessionNome) {
+    // Se o cliente já está logado, manda direto para o cardápio
+    redirect(`/${slug}/mesa/${mesaId}/cardapio`);
+  }
+
+  // ============================================================
+  // 3. BUSCA DADOS DA EMPRESA E VALIDA LIMITE
+  // ============================================================
   const empresa = await prisma.config.findUnique({
     where: { url: slug }
   });
@@ -23,24 +51,17 @@ export default async function MesaLoginPage({ params }: PageProps) {
     return <div className="p-10 text-center">Empresa não encontrada.</div>;
   }
 
-  // 2. Validação de Limite de Mesas
+  // Validação de Limite de Mesas
   const numeroMesa = parseInt(mesaId);
   const totalMesas = empresa.totalMesas || 0;
 
   if (numeroMesa > totalMesas) {
-    // AQUI MUDOU: Usamos o componente Client Side separado
     return <TableLimitError mesaId={mesaId} limit={totalMesas} />;
   }
 
-  // 3. Verifica se já existe sessão
-  const cookieStore = cookies();
-  const sessionNome = cookieStore.get(`comanda_nome_${slug}_${mesaId}`)?.value;
-
-  if (sessionNome) {
-    redirect(`/${slug}/mesa/${mesaId}/cardapio`);
-  }
-
-  // 4. Renderiza o Login
+  // ============================================================
+  // 4. RENDERIZA O FORMULÁRIO DE ABERTURA (CLIENTE)
+  // ============================================================
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col justify-center items-center p-4" style={{ backgroundColor: empresa.corfundo || '#f0f0f0' }}>
       

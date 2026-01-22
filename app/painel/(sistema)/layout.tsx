@@ -75,6 +75,7 @@ export default function LojaLayout({
               <div className="sub-item">
                 <ul>
                   <li><Link href="/painel/company" onClick={() => setIsConfigOpen(false)}>Minha Empresa</Link></li>
+                  <li><Link href="/painel/funcionarios" onClick={() => setIsConfigOpen(false)}>Cadastro de Funcionários</Link></li>
                   <li className="logout-wrapper"><LojaLogoutButton /></li>
                 </ul>
               </div>

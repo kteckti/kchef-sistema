@@ -5,6 +5,7 @@ import ProductModal from './ProductModal';
 import { toast } from 'react-hot-toast';
 import LogoutMesaButton from '@/app/[slug]/components/LogoutMesaButton';
 import OrderHistoryModal from './OrderHistoryModal';
+import StaffLogoutButton from '@/app/[slug]/components/StaffLogoutButton';
 
 type Produto = {
     id: number;
@@ -122,6 +123,8 @@ export default function MenuContent({ empresa, categorias, produtos, mesaId, nom
 
                     {/* ÁREA DOS BOTÕES (Acompanhar + Sair) */}
                     <div style={{ flexShrink: 0, marginLeft: '10px', display: 'flex', gap: '8px' }}>
+
+                        <StaffLogoutButton slug={empresa.url} mesaId={mesaId} />
 
                         {/* BOTÃO ACOMPANHAR PEDIDOS */}
                         <button

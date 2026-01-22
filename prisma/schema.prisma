@@ -158,14 +158,16 @@ model Mesa {
 
 // --- 7. FUNCIONÁRIOS (Baseado em funcionarios.php) ---
 model Funcionario {
-  id     Int    @id @default(autoincrement())
-  idu    Int
-  nome   String
-  login  String
-  senha  String // SHA1
-  acesso Int    // 1=PDV, 2=Cozinha
+  id        Int      @id @default(autoincrement())
+  idu       Int      // ID da Loja (Dono)
+  nome      String
+  login     String
+  senha     String   // Vamos salvar criptografado com bcrypt
+  funcao    String   // "GERENTE", "CAIXA", "ATENDIMENTO", "COZINHA"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   
-  @@map("funcionarios") // Deduzi o nome, se der erro trocamos
+  @@map("funcionarios")
 }
 
 // --- TABELAS AUXILIARES DO ADMIN (Já tínhamos) ---
