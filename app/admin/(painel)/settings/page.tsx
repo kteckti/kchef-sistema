@@ -2,6 +2,8 @@ import { prisma } from '../../../../src/lib/prisma';
 import Link from 'next/link';
 import SettingsForm from './SettingsForm';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SettingsPage() {
   const config = await prisma.adm.findFirst();
 
