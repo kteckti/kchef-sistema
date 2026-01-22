@@ -6,7 +6,7 @@ generator client {
 
 datasource db {
   provider = "postgresql" // ou "mysql", dependendo do seu banco local
-  url = env("POSTGRES_PRISMA_URL")
+  url = env("PRISMA_DATABASE_URL")
   directUrl = env("POSTGRES_URL")
 }
 
