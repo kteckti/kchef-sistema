@@ -7,7 +7,7 @@ generator client {
 datasource db {
   provider = "postgresql" // ou "mysql", dependendo do seu banco local
   url = env("POSTGRES_PRISMA_URL")
-  directUrl = env("POSTGRES_URL_NON_POOLING")
+  directUrl = env("POSTGRES_URL")
 }
 
 // --- 1. CONFIGURAÇÕES DA LOJA (Baseado em dadosempresa.php) ---
