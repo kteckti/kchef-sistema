@@ -5,70 +5,135 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 
-// Função auxiliar para pegar o ID da empresa logada (ajuste conforme sua autenticação atual)
+// --- FUNÇÃO CORRIGIDA: Busca Empresa pelo ID direto ---
 async function getEmpresaId() {
-  // Supondo que você use um cookie 'painel_session' ou similar
-  // Se ainda não tiver login de painel robusto, vamos pegar fixo ou do cookie existente
-  // Por enquanto, vamos assumir que o IDU vem de algum lugar ou você passa fixo.
-  // Vou deixar genérico para buscarmos pelo usuário admin.
-  
-  // IMPORTANTE: Ajuste aqui para pegar o ID real do dono logado no painel
-  return 2; // <--- TROQUE ISSO PELO ID DA SUA SESSÃO QUANDO TIVERMOS O LOGIN DO PAINEL PRONTO
+  const cookieStore = cookies();
+  const sessionCookie = cookieStore.get('painel_session')?.value;
+
+  console.log("--- DEBUG: BUSCANDO ID DA EMPRESA ---");
+
+  if (sessionCookie) {
+    try {
+      let empresaIdNoCookie;
+
+      // 1. Tenta ler o ID de dentro do Cookie (Seja JSON ou Número puro)
+      if (sessionCookie.trim().startsWith('{')) {
+        const session = JSON.parse(sessionCookie);
+        empresaIdNoCookie = session.id; 
+      } else {
+        empresaIdNoCookie = sessionCookie;
+      }
+
+      console.log("1. ID lido do cookie:", empresaIdNoCookie);
+
+      if (empresaIdNoCookie) {
+        // 2. BUSCA POR ID (Conforme solicitado)
+        // Verificamos se essa empresa realmente existe no banco
+        const config = await prisma.config.findUnique({
+          where: { id: Number(empresaIdNoCookie) } // <--- ALTERADO DE idu PARA id
+        });
+
+        if (config) {
+          console.log("2. SUCESSO! Empresa confirmada:", config.nomeempresa, "| ID:", config.id);
+          return config.id;
+        } else {
+          console.log("2. ERRO: ID do cookie não bate com nenhuma empresa na tabela Config.");
+        }
+      }
+
+    } catch (e) {
+      console.error("ERRO ao processar cookie:", e);
+    }
+  } else {
+    console.log("AVISO: Cookie 'painel_session' não encontrado.");
+  }
+
+  // FALLBACK: Se der erro, usa ID 1 (Sua empresa principal)
+  console.log("3. Usando ID 1 como padrão.");
+  return 1;
 }
 
+// --- AS OUTRAS FUNÇÕES CONTINUAM IGUAIS ---
+
 export async function getFuncionarios() {
-  const idu = await getEmpresaId(); // Pega o ID da loja
+  const idu = await getEmpresaId();
+  
+  // Busca funcionários vinculados a esta empresa (idu = id da empresa)
   return await prisma.funcionario.findMany({
-    where: { idu },
+    where: { idu: idu },
     orderBy: { nome: 'asc' }
   });
 }
 
-export async function salvarFuncionario(formData: FormData) {
-  const idu = await getEmpresaId();
-  const id = formData.get('id');
-  const nome = formData.get('nome') as string;
-  const login = formData.get('login') as string;
-  const senha = formData.get('senha') as string;
-  const funcao = formData.get('funcao') as string;
-
+export async function excluirFuncionario(id: number) {
   try {
-    // Verifica se o login já existe (para evitar duplicidade na mesma loja)
+    const idu = await getEmpresaId();
+    
+    const apagado = await prisma.funcionario.deleteMany({
+      where: { 
+        id: Number(id),
+        idu: idu 
+      }
+    });
+
+    if (apagado.count === 0) {
+      return { error: "Erro: Funcionário não encontrado." };
+    }
+
+    revalidatePath('/painel/funcionarios');
+    return { success: true };
+  } catch (error) {
+    return { error: "Erro ao excluir." };
+  }
+}
+
+export async function salvarFuncionario(formData: FormData) {
+  try {
+    const idu = await getEmpresaId(); // Pega o ID da empresa (ex: 1)
+    
+    const id = formData.get('id');
+    const nome = formData.get('nome') as string;
+    const login = formData.get('login') as string;
+    const senha = formData.get('senha') as string;
+    const funcao = formData.get('funcao') as string;
+
+    if (!nome || !login || !funcao) {
+      return { error: "Preencha todos os campos obrigatórios." };
+    }
+
+    // Verifica se login já existe nesta empresa
     const existente = await prisma.funcionario.findFirst({
       where: { 
-        idu, 
-        login,
-        // Se for edição, exclui o próprio ID da busca
+        idu: idu, 
+        login: login,
         NOT: id ? { id: Number(id) } : undefined
       }
     });
 
     if (existente) {
-      return { error: "Este login já está em uso por outro funcionário." };
+      return { error: `O login '${login}' já existe na sua empresa.` };
     }
 
     const dados: any = {
-      idu,
+      idu: idu, // Salva o ID da empresa (1) no funcionário
       nome,
       login,
       funcao
     };
 
-    // Só atualiza a senha se ela foi preenchida (no caso de edição) ou se é novo
     if (senha && senha.trim() !== '') {
       const hash = await bcrypt.hash(senha, 10);
       dados.senha = hash;
+    } else if (!id) {
+      return { error: "Senha obrigatória para novo cadastro." };
     }
 
     if (id) {
-      // ATUALIZAR
       await prisma.funcionario.update({
         where: { id: Number(id) },
         data: dados
       });
     } else {
-      // CRIAR NOVO
-      if (!senha) return { error: "A senha é obrigatória para novos funcionários." };
       await prisma.funcionario.create({
         data: dados
       });
@@ -80,15 +145,5 @@ export async function salvarFuncionario(formData: FormData) {
   } catch (error) {
     console.error(error);
     return { error: "Erro ao salvar funcionário." };
-  }
-}
-
-export async function excluirFuncionario(id: number) {
-  try {
-    await prisma.funcionario.delete({ where: { id } });
-    revalidatePath('/painel/funcionarios');
-    return { success: true };
-  } catch (error) {
-    return { error: "Erro ao excluir." };
   }
 }

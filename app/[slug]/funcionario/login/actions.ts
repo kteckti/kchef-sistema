@@ -12,6 +12,10 @@ export async function loginFuncionarioAction(formData: FormData) {
   const callbackUrl = formData.get('callbackUrl') as string;
   const mesaId = formData.get('mesaId') as string;
 
+  console.log("--- DEBUG LOGIN ---");
+  console.log("1. Slug recebido:", slug);
+  console.log("2. Login digitado:", login);
+
   const empresa = await prisma.config.findUnique({ where: { url: slug } });
   if (!empresa) return { error: "Empresa não encontrada" };
 
@@ -44,7 +48,7 @@ export async function loginFuncionarioAction(formData: FormData) {
   if (mesaId) {
     // Se for login na mesa, o nome é específico
     cookieName = `staff_session_${slug}_${mesaId}`;
-    
+
     // LIMPEZA: Remove o cookie global antigo para evitar conflitos
     cookieStore.delete(`staff_session_${slug}`);
   }
@@ -55,7 +59,7 @@ export async function loginFuncionarioAction(formData: FormData) {
     funcao: funcionario.funcao,
     mesaVinculada: mesaId || 'GERAL'
   }), {
-    maxAge: msAteExpirar / 1000, 
+    maxAge: msAteExpirar / 1000,
     path: '/',
     httpOnly: true
   });
@@ -64,7 +68,7 @@ export async function loginFuncionarioAction(formData: FormData) {
     redirect(callbackUrl);
   } else {
     if (funcionario.funcao === 'GERENTE' && !mesaId) {
-        redirect('/painel/dashboard');
+      redirect('/painel/dashboard');
     }
     return { success: true, message: "Acesso liberado!" };
   }
