@@ -69,6 +69,9 @@ export default function Header() {
                         <li className="nav-item">
                             <Link className="nav-link nav-link-menu" href="/#contato">Contato</Link>
                         </li>
+                        <li className="nav-item">
+                            <Link className="nav-link nav-link-menu" href="/painel/login">Painel dos Clientes</Link>
+                        </li>
                         <li className="nav-item ms-3">
                             <a href="#" className="btn btn-custom btn-sm">
                                 Meus Chamados

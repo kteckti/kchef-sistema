@@ -65,7 +65,7 @@ export default function ServicesPage() {
                         <i className="fa-regular fa-envelope fa-2x feature-icon me-3"></i>
                         <div>
                             <h6 className="fw-bold mb-0">Email</h6>
-                            <a href="mailto:contato@kteck.com.br" className="text-decoration-none contact-link">contato@kteck.com.br</a>
+                            <a href="mailto:kteckti@gmail.com" className="text-decoration-none contact-link">kteckti@gmail.com</a>
                         </div>
                     </div>
                 </div>

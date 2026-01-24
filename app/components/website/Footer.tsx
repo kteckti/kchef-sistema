@@ -22,7 +22,7 @@ export default function Footer() {
                     <h5 className="fw-bold mb-3">Contato</h5>
                     <ul className="list-unstyled text-muted small">
                         <li className="mb-2"><strong>Matriz - Sorocaba:</strong> (15) 99664-1070</li>
-                        <li>contato@kteck.com.br</li>
+                        <li>kteckti@gmail.com</li>
                     </ul>
                     <div className="social-icons mt-3">
                         <a href="#"><i className="fab fa-instagram"></i></a>
