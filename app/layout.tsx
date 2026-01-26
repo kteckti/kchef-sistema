@@ -39,6 +39,7 @@ export default function RootLayout({
 
         {/* SEU CSS CUSTOMIZADO */}
         <link rel="stylesheet" href="/assets/css/style.css" />
+
       </head>
       <body className={inter.className}>
         {children}
@@ -50,6 +51,7 @@ export default function RootLayout({
 
         {/* SEU JS CUSTOMIZADO (Carregamos no final) */}
         <Script src="/assets/js/script.js" strategy="lazyOnload" />
+      
       </body>
     </html>
   );
