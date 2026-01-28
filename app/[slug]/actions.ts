@@ -131,3 +131,53 @@ export async function buscarHistoricoPedidos(
     return [];
   }
 }
+
+export async function solicitarFechamentoMesa(slug: string, mesaId: string, nome: string, celular: string) {
+  try {
+    // 1. Define o intervalo do dia (Hoje)
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // 2. Busca todos os pedidos ATIVOS (não cancelados) desta mesa/cliente HOJE
+    const pedidos = await prisma.pedido.findMany({
+      where: {
+        mesa: mesaId,
+        // Se quiser filtrar estritamente pelo cliente atual (segurança):
+        celular: celular, 
+        createdAt: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        status: { not: 5 } // Ignora pedidos cancelados (assumindo status 5 = cancelado)
+      }
+    });
+
+    if (!pedidos || pedidos.length === 0) {
+      return { error: "Nenhum consumo encontrado para esta mesa hoje." };
+    }
+
+    // 3. Calcula o total da conta
+    const totalConta = pedidos.reduce((acc, pedido) => acc + Number(pedido.total), 0);
+
+    // 4. SIMULAÇÃO DO ENVIO AO PDV
+    // Aqui você conectaria com seu sistema de impressão ou websocket
+    console.log(`[PDV] SOLICITAÇÃO DE FECHAMENTO:`);
+    console.log(`>> Mesa: ${mesaId}`);
+    console.log(`>> Cliente: ${nome} (${celular})`);
+    console.log(`>> Total a Pagar: R$ ${totalConta.toFixed(2)}`);
+
+    // DICA: Você pode criar um registro na tabela 'Notificacoes' ou mudar o status da mesa aqui
+    
+    return { 
+      success: true, 
+      total: totalConta,
+      message: `Conta solicitada com sucesso! Valor total: R$ ${totalConta.toFixed(2).replace('.', ',')}. Aguarde o garçom.` 
+    };
+
+  } catch (error) {
+    console.error("Erro ao fechar mesa:", error);
+    return { error: "Erro ao processar solicitação. Chame o garçom." };
+  }
+}

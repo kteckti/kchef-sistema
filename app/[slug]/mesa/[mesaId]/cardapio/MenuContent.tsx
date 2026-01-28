@@ -2,10 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import ProductModal from './ProductModal';
-import { toast } from 'react-hot-toast';
+import { toast } from 'react-hot-toast'; // Ainda usado para adicionar ao carrinho
 import LogoutMesaButton from '@/app/[slug]/components/LogoutMesaButton';
 import OrderHistoryModal from './OrderHistoryModal';
 import StaffLogoutButton from '@/app/[slug]/components/StaffLogoutButton';
+
+// Action de fechar conta
+import { solicitarFechamentoMesa } from '../../../actions'; 
 
 type Produto = {
     id: number;
@@ -34,8 +37,15 @@ export default function MenuContent({ empresa, categorias, produtos, mesaId, nom
     const [cartCount, setCartCount] = useState(0);
 
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    
+    // States do Botão de Conta
+    const [closingTable, setClosingTable] = useState(false);
+    
+    // --- NOVOS MODAIS PERSONALIZADOS ---
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false); // Pergunta "Tem certeza?"
+    const [isBillModalOpen, setIsBillModalOpen] = useState(false);       // Sucesso "Conta pedida"
+    const [billMessage, setBillMessage] = useState('');
 
-    // CORREÇÃO 1: Extrair o slug de dentro da empresa para usar no botão de logout
     const slug = empresa.url;
     const cartKey = `cart_${slug}_mesa_${mesaId}`;
 
@@ -59,6 +69,29 @@ export default function MenuContent({ empresa, categorias, produtos, mesaId, nom
 
         window.dispatchEvent(new Event('cartUpdated'));
         toast.success('Adicionado ao seu carrinho!');
+    };
+
+    // 1. O botão chama esta função: APENAS ABRE A PERGUNTA
+    const handlePedirContaClick = () => {
+        setIsConfirmModalOpen(true);
+    };
+
+    // 2. Se o usuário clicar em "SIM" no modal, roda esta função
+    const processarFechamento = async () => {
+        setIsConfirmModalOpen(false); // Fecha a pergunta
+        setClosingTable(true);        // Mostra loading no botão
+
+        const res = await solicitarFechamentoMesa(slug, mesaId, nomeCliente, celularCliente);
+        
+        setClosingTable(false);
+
+        if (res.error) {
+            toast.error(res.error);
+        } else {
+            // SUCESSO: Abre o Modal de Confirmação Final
+            setBillMessage(res.message || "Conta solicitada com sucesso! Aguarde o garçom.");
+            setIsBillModalOpen(true);
+        }
     };
 
     const openProduct = (prod: Produto) => {
@@ -103,9 +136,11 @@ export default function MenuContent({ empresa, categorias, produtos, mesaId, nom
                     maxWidth: '1200px',
                     margin: '10px auto 0px',
                     backgroundColor: '#fff',
-                    borderRadius: '12px'
+                    borderRadius: '12px',
+                    flexWrap: 'wrap',
+                    gap: '10px'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: '200px' }}>
                         <div className="brand-logo" style={{ flexShrink: 0 }}>
                             <div style={{ width: '60px', height: '60px', background: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', overflow: 'hidden' }}>
                                 <i className="fa fa-user" style={{ fontSize: '24px', color: '#999' }}></i>
@@ -121,17 +156,15 @@ export default function MenuContent({ empresa, categorias, produtos, mesaId, nom
                         </div>
                     </div>
 
-                    {/* ÁREA DOS BOTÕES (Acompanhar + Sair) */}
-                    <div style={{ flexShrink: 0, marginLeft: '10px', display: 'flex', gap: '8px' }}>
+                    <div style={{ flexShrink: 0, display: 'flex', gap: '8px', alignItems: 'center' }}>
 
                         <StaffLogoutButton slug={empresa.url} mesaId={mesaId} />
 
-                        {/* BOTÃO ACOMPANHAR PEDIDOS */}
                         <button
                             onClick={() => setIsHistoryOpen(true)}
-                            className="btn-acompanhar"
+                            title="Meus Pedidos"
                             style={{
-                                backgroundColor: '#f8f9fa', // Cor suave
+                                backgroundColor: '#f8f9fa',
                                 color: '#333',
                                 border: '1px solid #ddd',
                                 padding: '8px 12px',
@@ -142,18 +175,48 @@ export default function MenuContent({ empresa, categorias, produtos, mesaId, nom
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '5px',
-                                height: '100%' // Garante alinhamento com o botão de sair
+                                height: '35px'
                             }}
                         >
                             <i className="fa fa-list-alt"></i>
-                            <span className="d-none d-sm-inline">Pedidos</span> {/* Oculta texto em telas mto pequenas se precisar */}
+                            <span className="d-none d-sm-inline">Pedidos</span>
                         </button>
 
-                        {/* BOTÃO SAIR EXISTENTE */}
+                        {/* BOTÃO PEDIR CONTA (Agora abre o Modal de Pergunta) */}
+                        <button
+                            onClick={handlePedirContaClick}
+                            disabled={closingTable}
+                            title="Pedir a Conta"
+                            style={{
+                                backgroundColor: '#fff0f0',
+                                color: '#dc3545',
+                                border: '1px solid #dc3545',
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                fontSize: '12px',
+                                fontWeight: 'bold',
+                                cursor: closingTable ? 'wait' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                height: '35px',
+                                opacity: closingTable ? 0.7 : 1
+                            }}
+                        >
+                            {closingTable ? (
+                                <i className="fa fa-spinner fa-spin"></i>
+                            ) : (
+                                <>
+                                    <i className="fa fa-file-invoice-dollar"></i>
+                                    <span className="d-none d-sm-inline">Conta</span>
+                                </>
+                            )}
+                        </button>
+
                         <LogoutMesaButton slug={empresa.url} mesaId={mesaId} />
                     </div>
                 </div>
-                {/* RENDERIZAÇÃO DO MODAL DE HISTÓRICO */}
+                
                 <OrderHistoryModal
                     isOpen={isHistoryOpen}
                     onClose={() => setIsHistoryOpen(false)}
@@ -247,6 +310,86 @@ export default function MenuContent({ empresa, categorias, produtos, mesaId, nom
                 color={empresa.cormenu || '#3d734a'}
                 onAddToCart={handleAddToCart}
             />
+
+            {/* --- MODAL 1: PERGUNTA DE CONFIRMAÇÃO --- */}
+            {isConfirmModalOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 10001,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+                    backdropFilter: 'blur(2px)'
+                }}>
+                    <div className="animate__animated animate__zoomIn" style={{
+                        backgroundColor: '#fff', borderRadius: '15px', padding: '25px',
+                        textAlign: 'center', boxShadow: '0 5px 25px rgba(0,0,0,0.2)',
+                        maxWidth: '320px', width: '100%'
+                    }}>
+                        <div style={{ color: '#dc3545', fontSize: '40px', marginBottom: '15px' }}>
+                            <i className="fa-solid fa-circle-question"></i>
+                        </div>
+                        <h5 style={{ fontWeight: 'bold', marginBottom: '10px' }}>Finalizar Atendimento?</h5>
+                        <p style={{ fontSize: '14px', color: '#666', marginBottom: '20px' }}>
+                            Deseja pedir a conta da <strong>Mesa {mesaId}</strong> agora?
+                        </p>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button 
+                                onClick={() => setIsConfirmModalOpen(false)}
+                                className="btn btn-light w-50 fw-bold"
+                            >
+                                Não
+                            </button>
+                            <button 
+                                onClick={processarFechamento}
+                                className="btn btn-danger w-50 fw-bold"
+                            >
+                                Sim, Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- MODAL 2: SUCESSO (CONTA PEDIDA) --- */}
+            {isBillModalOpen && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 10002,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+                    backdropFilter: 'blur(3px)'
+                }}>
+                    <div className="animate__animated animate__fadeInUp" style={{
+                        backgroundColor: '#fff', borderRadius: '20px', padding: '30px',
+                        textAlign: 'center', boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                        maxWidth: '350px', width: '100%'
+                    }}>
+                        <div style={{ 
+                            color: '#28a745', fontSize: '60px', marginBottom: '15px',
+                            display: 'block' 
+                        }}>
+                            <i className="fa-regular fa-circle-check"></i>
+                        </div>
+                        
+                        <h4 style={{ fontWeight: '800', marginBottom: '10px', color: '#333' }}>
+                            Conta Solicitada!
+                        </h4>
+                        
+                        <p style={{ color: '#666', marginBottom: '25px', lineHeight: '1.5', fontSize: '15px' }}>
+                            {billMessage}
+                        </p>
+                        
+                        <button 
+                            onClick={() => setIsBillModalOpen(false)}
+                            className="btn btn-success w-100"
+                            style={{ 
+                                borderRadius: '50px', fontWeight: 'bold', padding: '12px',
+                                fontSize: '16px', boxShadow: '0 4px 15px rgba(40, 167, 69, 0.3)'
+                            }}
+                        >
+                            Entendi, aguardar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
