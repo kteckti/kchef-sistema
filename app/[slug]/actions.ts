@@ -3,6 +3,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/src/lib/prisma';
+import { revalidatePath } from 'next/cache';
 
 // --- 1. ABRIR MESA (LOGIN) ---
 export async function abrirMesaAction(formData: FormData) {
@@ -134,46 +135,86 @@ export async function buscarHistoricoPedidos(
 
 export async function solicitarFechamentoMesa(slug: string, mesaId: string, nome: string, celular: string) {
   try {
-    // 1. Define o intervalo do dia (Hoje)
+    // 1. Busca a empresa pelo slug para garantir que estamos mexendo na loja certa
+    const empresa = await prisma.config.findUnique({
+      where: { url: slug }
+    });
+
+    if (!empresa) {
+      return { error: "Empresa não encontrada." };
+    }
+
+    // 2. Define o intervalo do dia (Hoje) para não pegar pedidos de ontem
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const endOfDay = new Date();
     endOfDay.setHours(23, 59, 59, 999);
 
-    // 2. Busca todos os pedidos ATIVOS (não cancelados) desta mesa/cliente HOJE
-    const pedidos = await prisma.pedido.findMany({
+    // 3. MUDANÇA PRINCIPAL: Atualiza os pedidos ativos para Status 9 (Conta Solicitada)
+    // Afeta status 1 (Novo), 2 (Preparo) e 3 (Entrega/Mesa)
+    const update = await prisma.pedido.updateMany({
       where: {
+        idu: empresa.id,
         mesa: mesaId,
-        // Se quiser filtrar estritamente pelo cliente atual (segurança):
-        celular: celular, 
+        status: { in: [1, 2, 3] }, 
         createdAt: {
           gte: startOfDay,
           lte: endOfDay
-        },
-        status: { not: 5 } // Ignora pedidos cancelados (assumindo status 5 = cancelado)
+        }
+      },
+      data: {
+        status: 9 // <--- ESSE STATUS FAZ APARECER NA COLUNA AMARELA DO PDV
       }
     });
 
-    if (!pedidos || pedidos.length === 0) {
-      return { error: "Nenhum consumo encontrado para esta mesa hoje." };
+    // 4. Se nenhum registro foi atualizado, verificamos o motivo
+    if (update.count === 0) {
+      // Verifica se já existe algum pedido com status 9 (para não dar erro se o cliente clicar 2x)
+      const jaSolicitado = await prisma.pedido.count({
+        where: {
+             idu: empresa.id, 
+             mesa: mesaId, 
+             status: 9, 
+             createdAt: { gte: startOfDay, lte: endOfDay }
+        }
+      });
+      
+      if (jaSolicitado > 0) {
+         // Se já pediu, apenas retornamos sucesso para não assustar o cliente
+         const pedidosJaSolicitados = await prisma.pedido.findMany({
+            where: { idu: empresa.id, mesa: mesaId, status: 9, createdAt: { gte: startOfDay, lte: endOfDay } }
+         });
+         const totalJaSolicitado = pedidosJaSolicitados.reduce((acc, p) => acc + Number(p.total), 0);
+         
+         return { 
+            success: true, 
+            total: totalJaSolicitado,
+            message: `A conta já foi solicitada. Total: R$ ${totalJaSolicitado.toFixed(2).replace('.', ',')}. Aguarde o garçom.` 
+         };
+      }
+      
+      return { error: "Nenhum pedido em aberto encontrado para esta mesa hoje." };
     }
 
-    // 3. Calcula o total da conta
-    const totalConta = pedidos.reduce((acc, pedido) => acc + Number(pedido.total), 0);
+    // 5. Busca os pedidos atualizados para somar o total e mostrar ao cliente
+    const pedidosAtualizados = await prisma.pedido.findMany({
+        where: {
+            idu: empresa.id,
+            mesa: mesaId,
+            status: 9,
+            createdAt: { gte: startOfDay, lte: endOfDay }
+        }
+    });
+    
+    const totalConta = pedidosAtualizados.reduce((acc, pedido) => acc + Number(pedido.total), 0);
 
-    // 4. SIMULAÇÃO DO ENVIO AO PDV
-    // Aqui você conectaria com seu sistema de impressão ou websocket
-    console.log(`[PDV] SOLICITAÇÃO DE FECHAMENTO:`);
-    console.log(`>> Mesa: ${mesaId}`);
-    console.log(`>> Cliente: ${nome} (${celular})`);
-    console.log(`>> Total a Pagar: R$ ${totalConta.toFixed(2)}`);
-
-    // DICA: Você pode criar um registro na tabela 'Notificacoes' ou mudar o status da mesa aqui
+    // 6. Atualiza o PDV dos garçons em tempo real
+    revalidatePath(`/${slug}/pdv`);
     
     return { 
       success: true, 
       total: totalConta,
-      message: `Conta solicitada com sucesso! Valor total: R$ ${totalConta.toFixed(2).replace('.', ',')}. Aguarde o garçom.` 
+      message: `Conta solicitada com sucesso! Total: R$ ${totalConta.toFixed(2).replace('.', ',')}. O garçom levará a maquininha.` 
     };
 
   } catch (error) {

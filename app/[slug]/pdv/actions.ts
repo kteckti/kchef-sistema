@@ -4,7 +4,6 @@ import { prisma } from '@/src/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
 // --- HELPER: BUSCA ID DA EMPRESA PELO SLUG (URL) ---
-// Substitui a antiga função que buscava por cookie de admin
 async function getEmpresaPorSlug(slug: string) {
   if (!slug) return null;
   
@@ -16,7 +15,7 @@ async function getEmpresaPorSlug(slug: string) {
   return empresa.id;
 }
 
-// --- 1. BUSCAR PEDIDOS ATIVOS ---
+// --- 1. BUSCAR PEDIDOS ATIVOS (ATUALIZADO) ---
 export async function getPedidosPDV(slug: string) {
   const idu = await getEmpresaPorSlug(slug);
 
@@ -25,7 +24,9 @@ export async function getPedidosPDV(slug: string) {
   const pedidos = await prisma.pedido.findMany({
     where: {
       idu: idu,
-      status: { in: [1, 2, 3] }, // 1=Novo, 2=Preparo, 3=Entrega
+      // ATUALIZAÇÃO AQUI: Adicionado status 9 (Conta Solicitada)
+      status: { in: [1, 2, 3, 9] }, 
+      // 1=Novo, 2=Preparo, 3=Entrega, 9=Conta Solicitada
     },
     orderBy: { id: 'desc' },
     include: {
@@ -128,7 +129,7 @@ export async function getDadosCardapio(slug: string) {
     ...cat,
     produtos: cat.produtos.map(prod => ({
         ...prod,
-        valor: Number(prod.valor) // <--- Correção Vital
+        valor: Number(prod.valor) 
     }))
   }));
 }
@@ -159,10 +160,7 @@ export async function salvarPedidoBalcao(slug: string, dados: any) {
       data: {
         idu: idu,
         nome_cliente: dados.nome_cliente || 'Cliente Balcão',
-        
-        // CORREÇÃO: Usando celular_cliente conforme erro anterior
         celular_cliente: dados.celular || '', 
-        
         tipo_entrega: 'BALCAO', 
         forma_pagamento: dados.forma_pagamento,
         troco_para: dados.troco ? String(dados.troco) : null,
