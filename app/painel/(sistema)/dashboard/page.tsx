@@ -23,13 +23,14 @@ export default async function DashboardLojaPage() {
   const logoUrl = logoData?.foto ? `/img/logomarca/${logoData.foto}` : '/img/logo-padrao.png';
 
   // URL Base (usada para gerar QR Code e Links)
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://kteck.com.br';
 
   // Agora o link aponta para a estrutura correta: slug/mesa/id/cardapio
   // Definimos uma mesa padrão (ex: 01) para o link geral do dashboard, 
   // ou você pode tornar o número da mesa dinâmico se tiver essa informação.
   const mesaPadrao = "01";
   const linkCardapio = `${baseUrl}/${loja.url}/mesa/${mesaPadrao}/cardapio`;
+  const linkSlug = `${baseUrl}/${loja.url}`;
 
   return (
     <>
@@ -123,14 +124,18 @@ export default async function DashboardLojaPage() {
                     <div className="col-md-6">
                       <span>URL do seu PDV: <br />
                         <span className="tx-info tx-bold">
-                          <i className="fa fa-link"></i> {baseUrl}/painel/pdv
+                          <a href={`${linkSlug}/pdv`} target="_blank">
+                            <i className="fa fa-link"></i> {linkSlug}/pdv
+                          </a>
                         </span>
                       </span>
                     </div>
                     <div className="col-md-6">
                       <span>URL Tela Cozinha: <br />
                         <span className="tx-teal tx-bold">
-                          <i className="fa fa-link"></i> {baseUrl}/painel/cozinha
+                          <a href={`${linkSlug}/cozinha`} target="_blank">
+                            <i className="fa fa-link"></i> {linkSlug}/cozinha
+                          </a>
                         </span>
                       </span>
                     </div>
