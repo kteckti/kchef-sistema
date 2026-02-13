@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 
 export default function Header() {
   const pathname = usePathname();
-  const isHome = pathname === '/';
+  // Verificamos se estamos na home ou em uma âncora da home
+  const isHome = pathname === '/' || pathname === '/#home' || pathname === '/#sobre' || pathname === '/#contato';
 
   const [scrollPosition, setScrollPosition] = useState(0);
 
@@ -22,30 +23,28 @@ export default function Header() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Lógica:
-  // Se NÃO for home -> isSolid = true (Fundo Azul #102A43 Sempre)
-  // Se FOR home e rolou > 50px -> isSolid = true (Fundo Azul #102A43)
-  // Se FOR home e topo -> isSolid = false (Transparente)
+  // Lógica corrigida:
+  // Se NÃO for home -> isSolid é SEMPRE true.
+  // Se FOR home -> isSolid depende da rolagem (> 50px).
   const isSolid = !isHome || scrollPosition > 50;
 
   return (
     <header 
       className={`fixed-top transition-all ${isSolid ? 'scrolled' : ''}`}
+      style={{ 
+        backgroundColor: isSolid ? '#102A43' : 'transparent',
+        transition: 'background-color 0.3s ease-in-out',
+        boxShadow: isSolid ? '0 4px 12px rgba(0,0,0,0.1)' : 'none'
+      }}
     >
         <div className="container">
-            {/* MUDANÇA PRINCIPAL: Usamos sempre 'navbar-dark' para ter texto branco,
-                pois o fundo #102A43 é escuro. */}
             <nav className="navbar navbar-expand-lg navbar-dark">
                 
                 <Link className="navbar-brand" href="/">
-                    {/* Como o fundo é sempre escuro (ou imagem ou azul), a logo 
-                        deve estar sempre branca/clara */}
                      <img 
                         src="/assets/img/logo_oficial.png" 
                         width="200px" 
                         alt="Kteck" 
-                        // Se sua logo original for escura, mantemos o filtro para inverter sempre.
-                        // Se ela já for branca, remova o style abaixo.
                         style={{ filter: 'brightness(0) invert(1)' }}
                     />
                 </Link>
@@ -57,7 +56,6 @@ export default function Header() {
                 <div className="collapse navbar-collapse justify-content-end" id="navbarNav">
                     <ul className="navbar-nav align-items-center">
                         <li className="nav-item">
-                            {/* Adicionei 'nav-link' do bootstrap para espaçamento correto */}
                             <Link className="nav-link nav-link-menu" href="/#home">Home</Link>
                         </li>
                         <li className="nav-item">
@@ -72,8 +70,8 @@ export default function Header() {
                         <li className="nav-item">
                             <Link className="nav-link nav-link-menu" href="/painel/login">Painel dos Clientes</Link>
                         </li>
-                        <li className="nav-item ms-3">
-                            <a href="#" className="btn btn-custom btn-sm">
+                        <li className="nav-item ms-lg-3 mt-3 mt-lg-0">
+                            <a href="https://wa.me/5515996641070" target="_blank" className="btn btn-custom btn-sm">
                                 Meus Chamados
                             </a>
                         </li>
